@@ -239,11 +239,27 @@ class Index extends Component
             'attachment' => 'nullable|file|max:2048',
         ]);
 
-        // Cek apakah kategori sudah mencapai limit (hanya untuk tipe expense)
+        // Cek sisa anggaran jika transaksi adalah pengeluaran
         if ($this->form_type === 'expense') {
+            $budget = Budget::find($this->budget_id);
+            if ($budget) {
+                $remaining = $budget->remaining;
+                if ($this->amount > $remaining) {
+                    $this->dispatch('showAlert', [
+                        'type' => 'error',
+                        'message' => 'Transaksi tidak dapat dilakukan karena melebihi sisa anggaran. Sisa anggaran: ' . number_format($remaining, 0, ',', '.')
+                    ]);
+                    return;
+                }
+            }
+
+            // Cek limit budget
             $category = Category::find($this->form_category_id);
             if ($category && $category->isAtOrOverLimit()) {
-                session()->flash('error', 'Kategori ' . $category->name . ' tidak dapat digunakan karena sudah mencapai limit budget.');
+                $this->dispatch('showAlert', [
+                    'type' => 'error',
+                    'message' => 'Batas pengeluaran sudah tercapai. Transaksi tidak dapat dilakukan.'
+                ]);
                 return;
             }
         }
@@ -253,7 +269,8 @@ class Index extends Component
             $attachmentPath = $this->attachment->store('attachments', 'public');
         }
 
-        Transaction::create([
+        // Buat transaksi
+        $transaction = Transaction::create([
             'user_id' => Auth::id(),
             'type' => $this->form_type,
             'amount' => $this->amount,
@@ -264,45 +281,29 @@ class Index extends Component
             'attachment' => $attachmentPath,
         ]);
 
-        Notification::create([
-            'user_id' => Auth::id(),
-            'title' => 'Transaksi Baru',
-            'message' => ($this->description ?: 'Tanpa Nama') . ' berhasil dibuat.',
-            'type' => 'success',
-            'is_read' => false,
-        ]);
-
-        // Cek sisa anggaran setelah transaksi
-        if ($this->form_type === 'expense') {
+        // Perbarui budget jika transaksi berhasil dibuat
+        if ($transaction) {
             $budget = Budget::find($this->budget_id);
             if ($budget) {
-                // Gunakan accessor getRemainingAttribute yang sudah ada di model Budget
-                $remaining = $budget->remaining;
-
-                if ($remaining <= 0) {
-                    // Buat notifikasi untuk anggaran habis
-                    \App\Models\Notification::create([
-                        'user_id' => Auth::id(),
-                        'title' => 'Anggaran Habis',
-                        'message' => ($budget->notes ?: 'Tanpa Nama') . ' sudah habis terpakai.',
-                        'type' => 'warning',
-                        'is_read' => false,
-                    ]);
-
-                    // Tampilkan notifikasi Notyf
-                    session()->flash('notyf_type', 'warning');
-                    session()->flash('notyf_message', 'Anggaran ' . ($budget->notes ?: 'Tanpa Nama') . ' sudah habis terpakai!');
+                // Jika pemasukan, tambahkan ke total_amount budget
+                if ($this->form_type === 'income') {
+                    $budget->total_amount += $this->amount;
+                    $budget->save();
                 }
             }
         }
 
-        $this->closeModal();
+        Notification::create([
+            'user_id' => Auth::id(),
+            'title' => 'Transaksi Berhasil',
+            'message' => 'Transaksi ' . ($this->form_type === 'income' ? 'pemasukan' : 'pengeluaran') . ' sebesar ' . number_format($this->amount, 0, ',', '.') . ' berhasil ditambahkan.',
+            'type' => 'success',
+        ]);
+
         $this->resetForm();
-        $this->dispatch('transactionAdded');
-        $this->dispatch('refresh');
-        session()->flash('notyf_type', 'success');
-        session()->flash('notyf_message', 'Transaksi berhasil dibuat.');
-        return redirect(request()->header('Referer'));
+        $this->isOpen = false;
+        $this->dispatch('notyf:success', ['message' => 'Transaksi berhasil ditambahkan']);
+        $this->refreshTransactions();
     }
 
     public function edit($id)
@@ -331,11 +332,35 @@ class Index extends Component
     {
         $this->validate();
 
-        // Cek apakah kategori sudah mencapai limit (hanya untuk tipe expense)
+        // Cek sisa anggaran jika transaksi adalah pengeluaran
         if ($this->form_type === 'expense') {
+            $budget = Budget::find($this->budget_id);
+            if ($budget) {
+                // Ambil transaksi yang sedang diedit untuk menghitung sisa anggaran yang benar
+                $currentTransaction = Transaction::find($this->transaction_id);
+                $remaining = $budget->remaining;
+                
+                // Jika ini adalah transaksi pengeluaran yang sudah ada, tambahkan jumlah sebelumnya ke remaining
+                if ($currentTransaction && $currentTransaction->type === 'expense') {
+                    $remaining += $currentTransaction->amount;
+                }
+
+                if ($this->amount > $remaining) {
+                    $this->dispatch('showAlert', [
+                        'type' => 'error',
+                        'message' => 'Transaksi tidak dapat dilakukan karena melebihi sisa anggaran. Sisa anggaran: ' . number_format($remaining, 0, ',', '.')
+                    ]);
+                    return;
+                }
+            }
+
+            // Cek limit budget
             $category = Category::find($this->form_category_id);
             if ($category && $category->isAtOrOverLimit()) {
-                session()->flash('error', 'Kategori ' . $category->name . ' tidak dapat digunakan karena sudah mencapai limit budget.');
+                $this->dispatch('showAlert', [
+                    'type' => 'error',
+                    'message' => 'Batas pengeluaran sudah tercapai. Transaksi tidak dapat dilakukan.'
+                ]);
                 return;
             }
         }
@@ -416,10 +441,9 @@ class Index extends Component
         if ($this->form_type === 'expense' && $this->form_category_id) {
             $category = Category::find($this->form_category_id);
             if ($category && $category->isAtOrOverLimit()) {
-                // Gunakan array asosiatif dengan string sebagai key
                 $this->dispatch('showAlert', [
                     'type' => 'warning',
-                    'message' => 'Kategori ' . $category->name . ' sudah mencapai limit budget. Transaksi masih dapat disimpan, tetapi akan melebihi budget yang ditentukan.'
+                    'message' => 'Batas pengeluaran sudah tercapai. Transaksi masih dapat disimpan, tetapi akan melebihi batas yang ditentukan.'
                 ]);
             }
         }

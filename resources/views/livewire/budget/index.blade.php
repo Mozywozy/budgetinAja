@@ -60,6 +60,17 @@
                                 class="pl-10 w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition-all duration-200">
                         </div>
                     </div>
+
+                    <div class="col-span-1">
+                        <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select wire:model.live="status" id="status" class="w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition-all duration-200">
+                            <option value="">Semua Status</option>
+                            <option value="active">Aktif</option>
+                            <option value="upcoming">Akan Datang</option>
+                            <option value="completed">Selesai</option>
+                        </select>
+                    </div>
+
                     <div class="col-span-1">
                         <label for="date_from" class="block text-sm font-medium text-gray-700 mb-1">Dari Tanggal</label>
                         <div class="relative rounded-md shadow-sm">
@@ -87,9 +98,11 @@
                     </div>
                     <div class="col-span-1 flex items-end">
                         <button wire:click="resetFilters"
-                            class="px-4 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 w-full flex items-center justify-center shadow-md">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            class="w-full flex justify-center items-center px-4 py-2 bg-gray-100 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:text-gray-500 hover:bg-gray-200 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-200 active:text-gray-800 active:bg-gray-50 disabled:opacity-25 transition duration-150 ease-in-out">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                             Reset Filter
                         </button>
@@ -101,7 +114,7 @@
         <!-- Daftar Anggaran dengan Card -->
         <div class="bg-transparent">
             <div class="p-0">
-                @if (count($budgets) > 0)
+                @if (count($budgets)> 0)
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         @foreach ($budgets as $budget)
                             @php
@@ -134,45 +147,51 @@
                                 }
                             @endphp
 
-                            <div
-                                class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ring-1 {{ $colors['ring'] }}">
+                            <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ring-1 {{ $colors['ring'] }}">
                                 <div class="p-6">
-                                    <div class="flex justify-between items-start mb-3">
-                                        <div class="flex-1 pr-2">
-                                            <h3 class="text-xl font-bold text-gray-800 truncate">
-                                                {{ $budget->notes ?: 'Anggaran Tanpa Nama' }}
-                                            </h3>
-                                            <div class="mt-1">
-                                                <span class="px-3 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full {{ $dateStatusClass }} shadow-sm">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        {!! $dateStatusIcon !!}
+                                    <!-- Header dengan nama budget dan tombol aksi -->
+                                    <div class="flex flex-col gap-3">
+                                        <div class="flex items-start justify-between">
+                                            <div class="flex-1 min-w-0 pr-4"> <!-- Tambahkan min-w-0 untuk mencegah overflow dan padding kanan -->
+                                                <h3 class="text-xl font-bold text-gray-800 break-words"> <!-- Ganti truncate dengan break-words -->
+                                                    {{ $budget->notes ?: 'Anggaran Tanpa Nama' }}
+                                                </h3>
+                                            </div>
+                                            <div class="flex gap-2 shrink-0"> <!-- Tambahkan shrink-0 untuk mencegah tombol mengecil -->
+                                                <button wire:click="edit({{ $budget->id }})"
+                                                    class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 p-2 rounded-full hover:bg-indigo-100 transition-colors duration-200 shadow-sm">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                                        viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                     </svg>
-                                                    {{ $dateStatus }}
-                                                </span>
+                                                </button>
+                                                <button wire:click="confirmDelete({{ $budget->id }})"
+                                                    class="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-full hover:bg-red-100 transition-colors duration-200 shadow-sm">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                                        viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
                                             </div>
                                         </div>
-                                        <div class="flex space-x-2 shrink-0">
-                                            <button wire:click="edit({{ $budget->id }})"
-                                                class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 p-2 rounded-full hover:bg-indigo-100 transition-colors duration-200 shadow-sm">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                                                    viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>  
-                                            </button>
-                                            <button wire:click="confirmDelete({{ $budget->id }})"
-                                                class="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-full hover:bg-red-100 transition-colors duration-200 shadow-sm z-10">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                                                    viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        <div class="flex flex-wrap gap-2"> <!-- Tambahkan flex-wrap untuk status badge yang responsif -->
+                                            <span class="px-3 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full {{ $dateStatusClass }} shadow-sm">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    {!! $dateStatusIcon !!}
                                                 </svg>
-                                            </button>
+                                                {{ $dateStatus }}
+                                            </span>
+                                            <span class="text-xs text-gray-500 py-1">
+                                                {{ $budget->start_date->format('d M Y') }} - {{ $budget->end_date->format('d M Y') }}
+                                            </span>
                                         </div>
                                     </div>
 
+                                    <!-- Konten budget lainnya tetap sama -->
                                     <div class="mt-6 bg-{{ $colors['light'] }} p-4 rounded-xl">
                                         <div class="flex justify-between items-center mb-2">
                                             <span class="text-sm font-medium text-gray-700">Total Anggaran:</span>
@@ -234,6 +253,9 @@
                             </div>
                         @endforeach
                     </div>
+                        <div class="mt-6">
+                            {{ $budgets->links() }}
+                        </div>
                 @else
                     <div class="text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-100">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none"

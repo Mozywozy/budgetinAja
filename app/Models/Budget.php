@@ -64,4 +64,22 @@ class Budget extends Model
         
         return $this->total_amount - $spent;
     }
+
+    protected $appends = ['status', 'remaining'];
+
+    /**
+     * Get the status of the budget.
+     */
+    public function getStatusAttribute()
+    {
+        $now = now();
+        
+        if ($this->start_date > $now) {
+            return 'upcoming'; // Akan datang
+        } elseif ($this->end_date < $now) {
+            return 'completed'; // Selesai
+        } else {
+            return 'active'; // Aktif
+        }
+    }
 }

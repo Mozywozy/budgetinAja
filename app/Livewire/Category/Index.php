@@ -254,7 +254,7 @@ class Index extends Component
                 return $query->where('type', $this->type);
             })
             ->orderBy($this->sortField, $this->sortDirection)
-            ->paginate(10);
+            ->paginate(12);
 
         return view('livewire.category.index', [
             'categories' => $categories
