@@ -61,6 +61,19 @@ class Category extends Model
             ->sum('amount');
     }
 
+    /**
+     * Calculate the total income in this category for the current month.
+     */
+    public function getCurrentMonthIncomeAttribute()
+    {
+        $now = now();
+        return $this->transactions()
+            ->where('type', 'income')
+            ->whereYear('transaction_date', $now->year)
+            ->whereMonth('transaction_date', $now->month)
+            ->sum('amount');
+    }
+
     public function isAtOrOverLimit()
     {
         if (!$this->budget_limit) {

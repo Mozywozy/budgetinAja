@@ -4,17 +4,22 @@ namespace App\Livewire\Budget;
 
 use Livewire\Component;
 use App\Models\Budget;
-use App\Models\Notification; // Tambahkan import ini
+use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
+use Livewire\WithPagination;
 use Carbon\Carbon;
 
 class Index extends Component
 {
-    // Properties untuk menampilkan data
-    public $budgets;
+    use WithPagination;
+
+    protected $paginationTheme = 'tailwind';
+
+    // Properties untuk filter dan pencarian
     public $search = '';
     public $date_from = '';
     public $date_to = '';
+    public $status = '';
     public $sortField = 'start_date';
     public $sortDirection = 'desc';
 
@@ -32,7 +37,7 @@ class Index extends Component
     public $budgetToDelete = null;
 
     // Listeners untuk event
-    protected $listeners = ['budgetAdded' => 'refreshBudgets', 'budgetUpdated' => 'refreshBudgets', 'budgetDeleted' => 'refreshBudgets'];
+    protected $listeners = ['$refresh'];
 
     // Rules untuk validasi
     protected $rules = [
@@ -44,27 +49,15 @@ class Index extends Component
 
     public function mount()
     {
-        $this->date_from = Carbon::now()->startOfMonth()->format('Y-m-d');
-        $this->date_to = Carbon::now()->addMonths(3)->endOfMonth()->format('Y-m-d');
+        // $this->date_from = Carbon::now()->startOfMonth()->format('Y-m-d');
+        // $this->date_to = Carbon::now()->addMonths(3)->endOfMonth()->format('Y-m-d');
         $this->start_date = Carbon::now()->format('Y-m-d');
         $this->end_date = Carbon::now()->endOfMonth()->format('Y-m-d');
-        $this->refreshBudgets();
     }
 
-    public function refreshBudgets()
+    public function updatedStatus()
     {
-        $this->budgets = Budget::where('user_id', Auth::id())
-            ->when($this->search, function ($query) {
-                return $query->where('notes', 'like', '%' . $this->search . '%');
-            })
-            ->when($this->date_from, function ($query) {
-                return $query->where('end_date', '>=', $this->date_from);
-            })
-            ->when($this->date_to, function ($query) {
-                return $query->where('start_date', '<=', $this->date_to);
-            })
-            ->orderBy($this->sortField, $this->sortDirection)
-            ->get();
+        $this->resetPage();
     }
 
     public function sortBy($field)
@@ -75,16 +68,16 @@ class Index extends Component
             $this->sortField = $field;
             $this->sortDirection = 'asc';
         }
-
-        $this->refreshBudgets();
+        $this->resetPage();
     }
 
     public function resetFilters()
     {
-        $this->reset(['search']);
-        $this->date_from = Carbon::now()->startOfMonth()->format('Y-m-d');
-        $this->date_to = Carbon::now()->addMonths(3)->endOfMonth()->format('Y-m-d');
-        $this->refreshBudgets();
+        $this->search = '';
+        $this->status = '';
+        $this->date_from = '';  // Reset ke kosong
+        $this->date_to = ''; 
+        $this->resetPage();
     }
 
     public function openForm()
@@ -183,7 +176,7 @@ class Index extends Component
         }
 
         $this->closeForm();
-        $this->refreshBudgets();
+        $this->resetPage();
         return redirect(request()->header('Referer'));
     }
 
@@ -237,26 +230,53 @@ class Index extends Component
 
         $this->showDeleteModal = false;
         $this->budgetToDelete = null;
-        $this->refreshBudgets();
+        $this->resetPage();
         return redirect(request()->header('Referer'));
     }
     public function updatedSearch()
     {
-        $this->refreshBudgets();
+        $this->resetPage();
     }
 
     public function updatedDateFrom()
     {
-        $this->refreshBudgets();
+        $this->resetPage();
     }
 
     public function updatedDateTo()
     {
-        $this->refreshBudgets();
+        $this->resetPage();
     }
 
     public function render()
     {
-        return view('livewire.budget.index');
+        $budgets = Budget::where('user_id', Auth::id())
+            ->when($this->search, function ($query) {
+                return $query->where('notes', 'like', '%' . $this->search . '%');
+            })
+            ->when($this->status, function ($query) {
+                $now = now();
+                switch ($this->status) {
+                    case 'active':
+                        return $query->where('start_date', '<=', $now)
+                                   ->where('end_date', '>=', $now);
+                    case 'upcoming':
+                        return $query->where('start_date', '>', $now);
+                    case 'completed':
+                        return $query->where('end_date', '<', $now);
+                }
+            })
+            ->when($this->date_from, function ($query) {
+                return $query->where('start_date', '>=', $this->date_from);
+            })
+            ->when($this->date_to, function ($query) {
+                return $query->where('end_date', '<=', $this->date_to);
+            })
+            ->orderBy($this->sortField, $this->sortDirection)
+            ->paginate(9);
+
+        return view('livewire.budget.index', [
+            'budgets' => $budgets
+        ]);
     }
 }

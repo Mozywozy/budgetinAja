@@ -580,19 +580,13 @@
         </div>
     </div>
 
-    <!-- Modal Form tetap sama, hanya perubahan minor pada styling -->
-    <!-- ... existing modal code ... -->
-
-    <!-- ... existing delete modal code ... -->
-
     <script>
         document.addEventListener('livewire:initialized', () => {
             @this.on('showAlert', (data) => {
                 console.log('Alert data:', data);
                 Swal.fire({
                     title: data.type === 'error' ? 'Perhatian!' : 'Informasi',
-                    text: data.message ||
-                        'Kategori ini sudah mencapai limit budget',
+                    text: data.message || 'Batas pengeluaran sudah tercapai/tidak mencukupi, Cek budgetmu', // Menghapus referensi ke "kategori"
                     icon: data.type || 'warning',
                     confirmButtonText: 'OK'
                 }).then((result) => {
