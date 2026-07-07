@@ -192,7 +192,7 @@
             <div class="container mx-auto px-6 text-center">
                 <h1 class="text-4xl md:text-6xl font-extrabold text-gray-800 leading-tight" data-aos="fade-up"
                     data-aos-duration="1000">
-                    Lacak Anggaran Anda, <br>
+                    Lacak Anggaran Anda dengan mudah, <br>
                     <span class="text-[#3CB371]">Hemat Lebih Cerdas</span> dengan BudgetinAja
                 </h1>
                 <p class="mt-6 max-w-2xl mx-auto text-lg text-gray-600" data-aos="fade-up" data-aos-duration="1000"
